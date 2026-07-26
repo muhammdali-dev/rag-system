@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System</title>
+    <style>
+       * { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0D1117;
+    color: #E6EDF3;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    background: #161B22;
+    border-right: 1px solid #30363D;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    overflow: hidden;
+}
+
+.sidebar h2 {
+    color: #58A6FF;
+    font-size: 16px;
+    margin-bottom: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-area { margin-bottom: 16px; }
+
+.upload-btn {
+    width: 100%;
+    background: #1F6FEB;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.upload-btn:hover { background: #388BFD; }
+
+input[type="file"] { display: none; }
+
+.doc-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.doc-item {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #8B949E;
+    border: 1px solid transparent;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.doc-item:hover { background: #21262D; color: #E6EDF3; }
+.doc-item.active { background: #21262D; border-color: #58A6FF; color: #58A6FF; }
+
+.doc-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    display: block;
+}
+
+.doc-delete {
+    background: #21262D;
+    border: 1px solid #F85149;
+    color: #F85149;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-left: 6px;
+}
+
+.doc-delete:hover { background: #F85149; color: white; }
+
+.status-msg {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.status-msg.success { background: rgba(63,185,80,0.1); color: #3FB950; }
+.status-msg.error { background: rgba(248,81,73,0.1); color: #F85149; }
+.status-msg.loading { background: rgba(88,166,255,0.1); color: #58A6FF; }
+
+/* Main Chat */
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #30363D;
+    background: #161B22;
+}
+
+.chat-header h1 { font-size: 18px; color: #58A6FF; }
+
+.chat-header p {
+    font-size: 12px;
+    color: #8B949E;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    max-width: 80%;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.user-msg {
+    background: #1F6FEB;
+    color: white;
+    align-self: flex-end;
+}
+
+.ai-msg {
+    background: #21262D;
+    color: #E6EDF3;
+    align-self: flex-start;
+    border: 1px solid #30363D;
+}
+
+.input-area {
+    padding: 16px 20px;
+    border-top: 1px solid #30363D;
+    display: flex;
+    gap: 10px;
+    background: #161B22;
+}
+
+.input-area input {
+    flex: 1;
+    background: #0D1117;
+    border: 1px solid #30363D;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #E6EDF3;
+    font-size: 14px;
+    outline: none;
+}
+
+.input-area input:focus { border-color: #58A6FF; }
+
+.send-btn {
+    background: #1F6FEB;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.send-btn:disabled { background: #21262D; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <button onclick="toggleMode()" id="modeBtn" style="
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: #21262D;
+    color: #E6EDF3;
+    border: 1px solid #30363D;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    z-index: 1000;
+">🌙 Dark</button>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>📚 RAG System</h2>
+
+        <div class="upload-area">
+            <input type="file" id="pdfFile" accept=".pdf">
+            <button class="upload-btn" onclick="document.getElementById('pdfFile').click()">
+                📁 Choose PDF
+            </button>
+            <button class="upload-btn" id="uploadBtn" onclick="uploadPDF()" style="background:#238636; display:none;">
+                ⬆️ Upload PDF
+            </button>
+            <div class="status-msg" id="statusMsg" style="display:none;"></div>
+        </div>
+
+        <div class="doc-list" id="docList">
+            <p style="color:#8B949E; font-size:12px; text-align:center;">
+                Uploade Document. No document yet
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Chat -->
+    <div class="main">
+        <div class="chat-header">
+            <h1>🤖 RAG Chatbot</h1>
+            <p id="activeDoc">NO Document Selected. Select a document to start chatting!</p>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            <div class="message ai-msg">
+                Assalam o Alaikum! First upload a PDF document to start chatting. 📄
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="questionInput"
+                placeholder="Write your question here...related to the selected document"
+                onkeypress="handleKey(event)">
+            <button class="send-btn" id="sendBtn" onclick="askQuestion()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let isDark = true;
+
+function toggleMode() {
+    isDark = !isDark;
+    const btn = document.getElementById('modeBtn');
+    const sidebar = document.querySelector('.sidebar');
+    const chatHeader = document.querySelector('.chat-header');
+    const inputArea = document.querySelector('.input-area');
+    const input = document.querySelector('.input-area input');
+
+    if (!isDark) {
+        // Light mode
+        document.body.style.background = '#F6F8FA';
+        document.body.style.color = '#1C1C1C';
+        sidebar.style.background = '#FFFFFF';
+        sidebar.style.borderColor = '#D0D7DE';
+        chatHeader.style.background = '#FFFFFF';
+        chatHeader.style.borderColor = '#D0D7DE';
+        inputArea.style.background = '#FFFFFF';
+        inputArea.style.borderColor = '#D0D7DE';
+        input.style.background = '#F6F8FA';
+        input.style.color = '#1C1C1C';
+        input.style.borderColor = '#D0D7DE';
+        document.querySelectorAll('.ai-msg').forEach(el => {
+            el.style.background = '#EFEFEF';
+            el.style.color = '#1C1C1C';
+            el.style.borderColor = '#D0D7DE';
+        });
+        document.querySelectorAll('.doc-item').forEach(el => {
+            el.style.color = '#1C1C1C';
+        });
+        document.querySelectorAll('.doc-item.active').forEach(el => {
+    el.style.background = '#E8F0FE';
+    el.style.borderColor = '#1F6FEB';
+    el.style.color = '#1F6FEB';
+});
+        document.querySelector('.sidebar h2').style.color = '#1F6FEB';
+        btn.style.background = '#1C1C1C';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = '#1C1C1C';
+        btn.textContent = '☀️ Light';
+        
+    } else {
+        // Dark mode
+        document.body.style.background = '#0D1117';
+        document.body.style.color = '#E6EDF3';
+        sidebar.style.background = '#161B22';
+        sidebar.style.borderColor = '#30363D';
+        chatHeader.style.background = '#161B22';
+        chatHeader.style.borderColor = '#30363D';
+        inputArea.style.background = '#161B22';
+        inputArea.style.borderColor = '#30363D';
+        input.style.background = '#0D1117';
+        input.style.color = '#E6EDF3';
+        input.style.borderColor = '#30363D';
+        document.querySelectorAll('.ai-msg').forEach(el => {
+            el.style.background = '#21262D';
+            el.style.color = '#E6EDF3';
+            el.style.borderColor = '#30363D';
+        });
+        document.querySelectorAll('.doc-item').forEach(el => {
+            el.style.color = '#8B949E';
+        });
+        document.querySelectorAll('.doc-item.active').forEach(el => {
+    el.style.background = '#21262D';
+    el.style.borderColor = '#58A6FF';
+    el.style.color = '#58A6FF';
+});
+        document.querySelector('.sidebar h2').style.color = '#58A6FF';
+        btn.style.background = '#21262D';
+        btn.style.color = '#E6EDF3';
+        btn.style.borderColor = '#30363D';
+        btn.textContent = '🌙 Dark';
+    }
+}
+        const API = window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:8000'
+            : 'https://rag-system-production.up.railway.app';
+
+        let activeDocId = null;
+        let uploadedDocs = [];
+
+        // File selected
+        document.getElementById('pdfFile').addEventListener('change', function() {
+            if (this.files[0]) {
+                document.getElementById('uploadBtn').style.display = 'block';
+                showStatus(`${this.files[0].name} selected`, 'loading');
+            }
+        });
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('statusMsg');
+            el.style.display = 'block';
+            el.className = `status-msg ${type}`;
+            el.textContent = msg;
+        }
+
+        async function uploadPDF() {
+            const file = document.getElementById('pdfFile').files[0];
+            if (!file) return;
+
+            showStatus('Uploading...', 'loading');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                showStatus(`✅ ${data.message}`, 'success');
+                uploadedDocs.push(data.doc_id);
+                renderDocList();
+                setActiveDoc(data.doc_id);
+
+                document.getElementById('uploadBtn').style.display = 'none';
+                document.getElementById('pdfFile').value = '';
+
+            } catch (error) {
+                showStatus('Error:Not uploaded!', 'error');
+            }
+        }
+
+        function renderDocList() {
+            const list = document.getElementById('docList');
+            if (uploadedDocs.length === 0) {
+                list.innerHTML = '<p style="color:#8B949E; font-size:12px; text-align:center;">NO document uploaded yet</p>';
+                return;
+            }
+
+            list.innerHTML = uploadedDocs.map(doc => `
+                <div class="doc-item ${doc === activeDocId ? 'active' : ''}" onclick="setActiveDoc('${doc}')">
+                    <span>📄 ${doc}</span>
+                    <button class="doc-delete" onclick="deleteDoc('${doc}', event)">🗑</button>
+                </div>
+            `).join('');
+        }
+
+        function setActiveDoc(docId) {
+            activeDocId = docId;
+            document.getElementById('activeDoc').textContent = `Active: ${docId}`;
+            renderDocList();
+
+            const chatArea = document.getElementById('chatArea');
+            const msg = document.createElement('div');
+            msg.className = 'message ai-msg';
+            msg.textContent = `"${docId}" selected — Now ask your questions!`;
+            if (!isDark) {
+    msg.style.background = '#EFEFEF';
+    msg.style.color = '#1C1C1C';
+    msg.style.borderColor = '#D0D7DE';
+}
+            chatArea.appendChild(msg);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        async function deleteDoc(docId, event) {
+            event.stopPropagation();
+
+            try {
+                await fetch(`${API}/document/${docId}`, { method: 'DELETE' });
+                uploadedDocs = uploadedDocs.filter(d => d !== docId);
+                if (activeDocId === docId) {
+                    activeDocId = null;
+                    document.getElementById('activeDoc').textContent = 'NO Document Selected. Select a document to start chatting!';
+                }
+                renderDocList();
+            } catch (error) {
+                showStatus('Not deleted!', 'error');
+            }
+        }
+
+        async function askQuestion() {
+            if (!activeDocId) {
+                alert('Please select a document!');
+                return;
+            }
+
+            const input = document.getElementById('questionInput');
+            const chatArea = document.getElementById('chatArea');
+            const sendBtn = document.getElementById('sendBtn');
+
+            const question = input.value.trim();
+            if (!question) return;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user-msg';
+            userDiv.textContent = question;
+            chatArea.appendChild(userDiv);
+
+            input.value = '';
+            sendBtn.disabled = true;
+
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message ai-msg';
+            typingDiv.textContent = 'AI is typing...';
+            if (!isDark) {
+    typingDiv.style.background = '#EFEFEF';
+    typingDiv.style.color = '#1C1C1C';
+    typingDiv.style.borderColor = '#D0D7DE';
+}
+            chatArea.appendChild(typingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            try {
+                const response = await fetch(`${API}/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        doc_id: activeDocId
+                    })
+                });
+                const data = await response.json();
+
+                typingDiv.remove();
+
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'message ai-msg';
+                aiDiv.innerHTML = data.answer.replace(/\n/g, '<br>');
+                if (!isDark) {
+    aiDiv.style.background = '#EFEFEF';
+    aiDiv.style.color = '#1C1C1C';
+    aiDiv.style.borderColor = '#D0D7DE';
+}
+                chatArea.appendChild(aiDiv);
+
+            } catch (error) {
+                typingDiv.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'message ai-msg';
+                errDiv.style.color = '#F85149';
+                errDiv.textContent = 'Error: Server se connection nahi hua!';
+                chatArea.appendChild(errDiv);
+            }
+
+            sendBtn.disabled = false;
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function handleKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                askQuestion();
+            }
+        }
+    </script>
+</body>
+</html>
