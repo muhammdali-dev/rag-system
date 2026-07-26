@@ -56,10 +56,10 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Upload PDF Files only!")
     
     # Temp file mein save karo
-    tmp_path = f"/tmp/{file.filename}"
-    with open(tmp_path, 'wb') as f:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
         content = await file.read()
-        f.write(content)
+        tmp.write(content)
+        tmp_path = tmp.name
     
     # PDF load karo
     loader = PyPDFLoader(tmp_path)
@@ -126,4 +126,4 @@ def delete_document(doc_id: str):
         raise HTTPException(status_code=404, detail="Document not found!")
     
     del documents_store[doc_id]
-    return {"message": f"{doc_id} deleted successfully!"}
+    return {"message": f"{doc_id} delete ho gaya!"}
