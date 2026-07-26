@@ -55,11 +55,18 @@ async def upload_document(file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Upload PDF Files only!")
     
-    # Temp file mein save karo
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-        content = await file.read()
-        tmp.write(content)
-        tmp_path = tmp.name
+    # OS detect karke temp file banao
+    import os
+    content = await file.read()
+    
+    if os.name == 'nt':  # Windows
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+    else:  # Linux — Railway
+        tmp_path = f"/tmp/{file.filename}"
+        with open(tmp_path, 'wb') as f:
+            f.write(content)
     
     # PDF load karo
     loader = PyPDFLoader(tmp_path)
@@ -84,7 +91,7 @@ async def upload_document(file: UploadFile = File(...)):
     
     return {
         "message": f"{file.filename} Uploaded successfully!",
-        "doc_id": doc_id,
+        "document_id": doc_id,
         "pages": len(docs),
         "chunks": len(chunks)
     }
