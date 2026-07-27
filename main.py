@@ -56,11 +56,11 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Upload PDF Files only!")
     
     # Temp file mein save karo
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-        content = await file.read()
-        tmp.write(content)
-        tmp_path = tmp.name
-    
+    content = await file.read()
+    tmp_path = os.path.join(tempfile.gettempdir(), file.filename)
+    with open(tmp_path, 'wb') as f:
+        f.write(content)
+
     # PDF load karo
     loader = PyPDFLoader(tmp_path)
     docs = loader.load()
