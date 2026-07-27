@@ -340,7 +340,7 @@ function toggleMode() {
 }
         const API = window.location.hostname === '127.0.0.1'
             ? 'http://127.0.0.1:8000'
-            : 'https://rag-system-production.up.railway.app';
+            : window.location.origin;
 
         let activeDocId = null;
         let uploadedDocs = [];
